@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -34,7 +36,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         imageView = (ImageView) findViewById(R.id.imagePreview);
-
+        /*
+        *   Every tme the app is re
+        * */
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE }, 1);
         }
@@ -53,7 +57,39 @@ public class MainActivity extends AppCompatActivity {
             *   Convert image from path into bitmap and set it to imageview
             * */
             Bitmap photoCapturedBitmap = BitmapFactory.decodeFile(imageFileLocation);
-            imageView.setImageBitmap(photoCapturedBitmap);
+
+            /*
+            *   Rotate the image based on phone orientation
+            * */
+            ExifInterface ei = null;
+            try {
+                ei = new ExifInterface(imageFileLocation);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+
+            Bitmap rotatedBitmap = null;
+            switch(orientation) {
+
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    rotatedBitmap = rotateImage(photoCapturedBitmap, 90);
+                    break;
+
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    rotatedBitmap = rotateImage(photoCapturedBitmap, 180);
+                    break;
+
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    rotatedBitmap = rotateImage(photoCapturedBitmap, 270);
+                    break;
+
+                case ExifInterface.ORIENTATION_NORMAL:
+                default:
+                    rotatedBitmap = photoCapturedBitmap;
+            }
+
+            imageView.setImageBitmap(rotatedBitmap);
         }
     }
 
@@ -114,5 +150,12 @@ public class MainActivity extends AppCompatActivity {
         imageFileLocation   = image.getAbsolutePath();
 
         return image;
+    }
+
+    public static Bitmap rotateImage(Bitmap source, float angle) {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(),
+                matrix, true);
     }
 }
