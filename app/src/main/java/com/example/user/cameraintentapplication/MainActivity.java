@@ -1,20 +1,32 @@
 package com.example.user.cameraintentapplication;
 
-import android.content.Context;
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.media.Image;
-import android.provider.MediaStore;
-import android.support.v7.app.AppCompatActivity;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.Toast;
+
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
     public static final int OPEN_CAMERA_CODE = 0;
-    ImageView imageView;
+    private ImageView imageView;
+    private String imageFileLocation = "";
+    private boolean permissionGranted = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,13 +34,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         imageView = (ImageView) findViewById(R.id.imagePreview);
-    }
 
-    public void takePhoto(View view) {
-
-        Intent openCameraIntent = new Intent();
-        openCameraIntent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
-        startActivityForResult(openCameraIntent, OPEN_CAMERA_CODE);
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE }, 1);
+        }
     }
 
     @Override
@@ -36,9 +45,74 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if(resultCode == RESULT_OK && requestCode == OPEN_CAMERA_CODE) {
             //Toast.makeText(this, "Photo takend successfully", Toast.LENGTH_SHORT).show();
-            Bundle extras = data.getExtras();
-            Bitmap imageBitMap = (Bitmap) extras.get("data");
-            imageView.setImageBitmap(imageBitMap);
+            //Bundle extras = data.getExtras();
+            //Bitmap imageBitMap = (Bitmap) extras.get("data");
+            //imageView.setImageBitmap(imageBitMap);
+
+            /*
+            *   Convert image from path into bitmap and set it to imageview
+            * */
+            Bitmap photoCapturedBitmap = BitmapFactory.decodeFile(imageFileLocation);
+            imageView.setImageBitmap(photoCapturedBitmap);
         }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        switch (requestCode) {
+            case 1: {
+                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                    permissionGranted = true;
+                else
+                    permissionGranted = false;
+            }
+        }
+
+    }
+
+    /*
+        *   Send intent to camera app to start
+        * */
+    public void takePhoto(View view) {
+
+        if(permissionGranted) {
+
+            Intent openCameraIntent = new Intent();
+            openCameraIntent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
+
+            /*
+            *   Retrieve the photo file
+            * */
+
+            File photoFile = null;
+
+            try {
+                photoFile = createImageFile();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            openCameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
+            startActivityForResult(openCameraIntent, OPEN_CAMERA_CODE);
+        } else {
+
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE }, 1);
+
+        }
+    }
+
+    public File createImageFile() throws IOException {
+
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFilename    = "IMAGE_" + timestamp + "_";
+        File storageDirectory   = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+
+        File image  = File.createTempFile(imageFilename, ".jpg", storageDirectory);
+        imageFileLocation   = image.getAbsolutePath();
+
+        return image;
     }
 }
