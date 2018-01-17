@@ -13,7 +13,6 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ImageView;
@@ -25,15 +24,19 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final int OPEN_CAMERA_CODE = 0;
+    public static final int OPEN_CAMERA_CODE    = 0;
     private ImageView imageView;
-    private String imageFileLocation = "";
-    private boolean permissionGranted = false;
+    private String imageFileLocation            = "";
+    private boolean permissionGranted           = false;
+    private String GALLERY_DIRECTOR = "CameraWazap";
+    private File galleryFolder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        createDirectory();
 
         imageView = (ImageView) findViewById(R.id.imagePreview);
         /*
@@ -139,14 +142,24 @@ public class MainActivity extends AppCompatActivity {
 
         }
     }
+    /*
+    *   Function to create storage directory
+    * */
+    private void createDirectory() {
+
+        File storageDirectory   = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        galleryFolder = new File(storageDirectory, GALLERY_DIRECTOR);
+        if(!galleryFolder.exists()) {
+            galleryFolder.mkdirs();
+        }
+    }
 
     public File createImageFile() throws IOException {
 
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFilename    = "IMAGE_" + timestamp + "_";
-        File storageDirectory   = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
 
-        File image  = File.createTempFile(imageFilename, ".jpg", storageDirectory);
+        File image  = File.createTempFile(imageFilename, ".jpg", galleryFolder);
         imageFileLocation   = image.getAbsolutePath();
 
         return image;
